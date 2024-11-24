@@ -1,33 +1,46 @@
-const API_KEY = prompt("write your key here") ; // Replace with your actual API key
+const API_KEY = prompt("Write your key here"); // Replace with your actual API key
 
 document.querySelector("#recipe-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const ingredients = document.querySelector("#ingredients").value;
-    const output = document.getElementById("recipe-output");
+    const output = document.querySelector("#recipe-output");
 
     output.innerHTML = "Loading recipes...";
 
     try {
-        const response = await fetch("https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct", {
+
+        const response = await fetch("https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct/v1/chat/completions", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
                 "Authorization": `Bearer ${API_KEY}`,
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                inputs: `I have these ingredients: ${ingredients}. Suggest 5 recipes I can make.`,
-                options: {
-                    use_cache: false, // Optional: Disable caching
-                },
-            }),
+                model: "meta-llama/Llama-3.1-8B-Instruct",
+                messages: [
+                    {
+                        role: "user",
+                        content: `I have these ingredients: ${ingredients}. Suggest 3 recipes I can make.`
+                    }
+                ],
+                max_tokens: 500,
+                stream: false
+            })
         });
 
-        const data = await response.json();
-        if (data.error) throw new Error(data.error.message);
+        // Check om respons er successful
+        if (!response.ok) {
+            throw new Error(`Error: ${response.statusText}`);
+        }
 
-        const recipes = data[0]?.generated_text || "No recipes found."; // Adjust based on Hugging Face API response
+        const data = await response.json(); // response som json
+
+        // tag opskifte fra respons
+        const recipes = data.choices[0]?.message.content || "No recipes found."; // juster respons fra Hugging
+
         output.innerHTML = `<pre>${recipes}</pre>`;
     } catch (error) {
         output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
     }
 });
+
